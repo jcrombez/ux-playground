@@ -1,0 +1,46 @@
+<div {{ attributes }}>
+    <button
+            type="button"
+            class="btn btn-primary"
+            data-loading="addClass(disabled)"
+            data-action="live#action"
+            data-action-name="refresh()"
+    >
+        <i class="fa-solid fa-refresh"></i> live#action refresh()
+    </button>
+
+    <ul class="p-5">
+
+        {% for task in form.vars.data.tasks %}
+            <li>
+                [{{ task.position }}] {{ task.title }} (id#{{ task.id }})
+
+                <a
+                    {% if not loop.first %}
+                        data-action="click->live#action"
+                        data-action-name="prevent|moveUp(task={{ task.id }})"
+                        data-loading="addClass(disabled)"
+                        class="btn btn-primary btn-sm"
+                    {% else %}
+                        class="btn btn-primary btn-sm disabled"
+                    {% endif %}
+                >
+                    <i class="bi bi-arrow-up"></i>
+                </a>
+
+                <a
+                    {% if not loop.last %}
+                        data-action="click->live#action"
+                        data-action-name="prevent|moveDown(task={{ task.id }})"
+                        data-loading="addClass(disabled)"
+                        class="btn btn-primary btn-sm"
+                    {% else %}
+                        class="btn btn-primary btn-sm disabled"
+                    {% endif %}
+                >
+                    <i class="bi bi-arrow-down"></i>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>

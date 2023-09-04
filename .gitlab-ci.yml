@@ -1,0 +1,44 @@
+image: kibatic/gitlab-runner
+
+services:
+  - docker:dind
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  DOCKER_IMAGE_TAG: $CI_PIPELINE_ID
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
+
+cache:
+  paths:
+    - node_modules
+    - vendor
+
+stages:
+  - build
+
+before_script:
+  - echo $CI_REGISTRY_IMAGE
+  - export DOCKER_IMAGE_TAG=$(echo $CI_COMMIT_BRANCH | sed "s/master/latest/" | sed "s#/#_#")
+  - echo $DOCKER_IMAGE_TAG
+  - cat /etc/*-release
+  - docker --version
+  - docker-compose --version
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+
+build:
+  stage: build
+  script:
+    - docker pull $CI_REGISTRY_IMAGE:$DOCKER_IMAGE_TAG || docker pull $CI_REGISTRY_IMAGE || true
+
+    - export JSON_TEMPLATE='{"branch":"%s","hash":"%s","build_id":"%s","built_at":"%s"}\n'
+    - printf "$JSON_TEMPLATE" "$CI_COMMIT_REF_NAME" "$CI_COMMIT_SHORT_SHA" "$CI_PIPELINE_ID" "$(date)" > public/version.json
+#    - sed -i "s|_sentry_release_|${CI_COMMIT_SHA:0:8}|g" config/config.yml
+
+    - docker-compose up -d --build
+    - docker-compose run -v $(pwd):/var/www --user=33 web make _deps
+    - docker-compose run -v $(pwd):/var/www --user=33 web make _assets
+#    - docker-compose run -v $(pwd):/var/www --user=33 web composer dump-autoload --optimize --classmap-authoritative
+
+    - docker-compose build --pull
+    - docker push $CI_REGISTRY_IMAGE:$DOCKER_IMAGE_TAG
